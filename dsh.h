@@ -9,3 +9,6 @@
 #define HISTORY_LEN 100
 
 // TODO: Your function prototypes below
+int dsh(char* cmd);
+void parent();
+void child();
