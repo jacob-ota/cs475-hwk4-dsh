@@ -21,34 +21,48 @@ char history[HISTORY_LEN] = "";
 
 // TODO: Your function definitions (declarations in dsh.h)
 int dsh(char* cmd) {
-    char path[MAXBUF];
+    char path[MAXBUF] = "";
     strcat(history, cmd);
-    strcat(history, " ");
-    printf("%s\n", history);
-    // char arguments[MAXBUF] = "";
-    // char *space = strtok(cmd, " ");
-    // int i = 0;
+    strcat(history, "\n");
+    char arguments[MAXBUF] = "";
+    char *space = strtok(cmd, " ");
+    int i = 0;
     //split the string by spaces and place them into the path or make an argument
-	// while (space != NULL)
-	// {
-    //     if(i == 0) {
-    //         //puts everything before first space into the path
-    //         strcpy(path, cmd);
-    //     }
-    //     else {
-    //         //creates the arguments
-    //         strcat(arguments, cmd);
-    //         strcat(arguments, " ");
-    //     }   
-    //     i++;
-	//     space = strtok(NULL, " ");
-    // }
-    strcpy(path, cmd);
+	while (space != NULL)
+	{
+        if(i == 0) {
+            //puts everything before first space into the path
+            strcpy(path, space);
+        }
+        else {
+            //creates the arguments
+            strcat(arguments, space);
+            strcat(arguments, "");
+        }   
+        i++;
+	    space = strtok(NULL, " ");
+    }
     if(path[0] != '/') {
         //check if it is a builtin
         if(chkBuiltin(path) == 1) {
             //cd
-            chdir("..");
+            if(strlen(arguments) == 0) {
+                chdir(getenv("HOME"));
+            }
+            else {
+                char pwd[MAXBUF];
+                char newPath[MAXBUF] = "";
+                if(getcwd(pwd, sizeof(pwd)) != NULL) {
+                    strcat(newPath, "/");
+                    strcat(newPath, arguments);
+                    strcat(pwd, newPath);
+                    //strcat(pwd, "/");
+                    //printf("%s\n", pwd);
+                }
+                if(chdir(pwd) != 0) {
+                    printf("No such directory: %s\n", arguments);
+                }
+            }
         }
         else if(chkBuiltin(path) == 2) {
             //pwd
@@ -62,22 +76,23 @@ int dsh(char* cmd) {
         }
         else if(chkBuiltin(path) == 3) {
             //history
-            char *space = strtok(history, " ");
+            char *space = strtok(history, "\n");
             //split the string by spaces and place
 	        while (space != NULL)
 	        {
-                printf("%s\n", history);
-	            space = strtok(NULL, " ");
+                printf("%s\n", space);
+	            space = strtok(NULL, "\n");
             }
         }
         else if(chkBuiltin(path) == 4) {
             //exit
             return -1;
         }
-        else if(chkBuiltin(path) == 5) {
-            //echo
-            return -1;
-        }
+        // if possible
+        // else if(chkBuiltin(path) == 5) {
+        //     //echo
+        //     return -1;
+        // }
     }
     else {
         if (access(path, F_OK | X_OK) == 0) {

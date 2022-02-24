@@ -22,11 +22,13 @@ int main(int argc, char **argv)
 	int test;
 	while(dshOn) {
 		printf("dsh> ");
-		scanf("%s", cmdline);
+		fgets(cmdline, MAXBUF, stdin);
+		cmdline[strlen(cmdline) - 1] = '\0';
 		test = dsh(cmdline);
 		if(test == -1) {
 			dshOn = false;
 		}
+		printf("\n");
 	}
 	return 0;
 }
