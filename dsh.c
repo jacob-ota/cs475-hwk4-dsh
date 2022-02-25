@@ -15,6 +15,7 @@
 #include <err.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <stdbool.h>
 #include "builtins.h"
 
 char history[HISTORY_LEN] = "";
@@ -24,8 +25,9 @@ int dsh(char* cmd) {
     char path[MAXBUF] = "";
     strcat(history, cmd);
     strcat(history, "\n");
+    strcpy(path, cmd);
     char arguments[MAXBUF] = "";
-    char *space = strtok(cmd, " ");
+    char *space = strtok(path, " ");
     int i = 0;
     //split the string by spaces and place them into the path or make an argument
 	while (space != NULL)
@@ -37,7 +39,7 @@ int dsh(char* cmd) {
         else {
             //creates the arguments
             strcat(arguments, space);
-            strcat(arguments, "");
+            strcat(arguments, "\0");
         }   
         i++;
 	    space = strtok(NULL, " ");
@@ -53,11 +55,10 @@ int dsh(char* cmd) {
                 char pwd[MAXBUF];
                 char newPath[MAXBUF] = "";
                 if(getcwd(pwd, sizeof(pwd)) != NULL) {
+                    //concatenate the newpath to the pwd
                     strcat(newPath, "/");
                     strcat(newPath, arguments);
                     strcat(pwd, newPath);
-                    //strcat(pwd, "/");
-                    //printf("%s\n", pwd);
                 }
                 if(chdir(pwd) != 0) {
                     printf("No such directory: %s\n", arguments);
@@ -93,27 +94,99 @@ int dsh(char* cmd) {
         //     //echo
         //     return -1;
         // }
+        
+        //if not a builtin
+        else {
+            char pwd[MAXBUF];
+            getcwd(pwd, sizeof(pwd));
+            strcat(pwd, cmd);
+            if (access(path, F_OK | X_OK) == 0) {
+                //file exists and is executable
+                //if an & is at the end then run the child without waiting
+                if(cmd[strlen(cmd) - 1] == '&') {
+                    if(fork() == 0) {
+                        child(path, arguments, i);
+                    }
+                }
+                //if it does not have a & then have the parent wait for the child
+                else {
+                    if(fork() != 0) {
+                        parent();
+                    }
+                    else {
+                        child(path, arguments, i);
+                    }
+                }
+            }
+            else {
+                char pathenv[MAXBUF] = "";
+                strcpy(pathenv, getenv("PATH"));
+                char *colon = strtok(pathenv, ":");
+                //create a bool that will show in the end if it is a file or not
+                bool fileThere = true;
+                //split the string by : and check if it is a executable
+	            while (colon != NULL)
+	            {
+                    //make a new path char
+                    char newPath[MAXBUF] = "";
+                    strcpy(newPath, colon);
+                    //cat the path into it to make it into a potential file that is executable
+                    strcat(newPath, "/");
+                    strcat(newPath, path);
+                    if (access(newPath, F_OK | X_OK) == 0) {
+                        //file exists and is executable
+                        //if an & is at the end then run the child without waiting
+                        if(cmd[strlen(cmd) - 1] == '&') {
+                            if(fork() == 0) {
+                                child(newPath, arguments, i);
+                            }
+                        }
+                        //if it does not have a & then have the parent wait for the child
+                        else {
+                            if(fork() != 0) {
+                                parent();
+                            }
+                            else {
+                                child(newPath, arguments, i);
+                            }
+                        }
+                        fileThere = true;
+                        break;
+                    }
+                    else {
+                        fileThere = false;
+                        colon = strtok(NULL, ":");
+                    }
+                }
+                if(!fileThere) {
+                    // file doesn't exist or is not executable
+                    printf("File %s is not a file or directory.\n", cmd);
+                }
+            }
+        }
     }
     else {
         if (access(path, F_OK | X_OK) == 0) {
-            // file exists and is executable
-            // if(path[strlen(path)] == '&') {
-            //     if(fork() == 0) {
-            //         child(path);
-            //     }
-            // }
-            // else {
+            //file exists and is executable
+            //if an & is at the end then run the child without waiting
+            if(cmd[strlen(cmd) - 1] == '&') {
+                if(fork() == 0) {
+                    child(path, arguments, i);
+                }
+            }
+            //if it does not have a & then have the parent wait for the child
+            else {
                 if(fork() != 0) {
                     parent();
                 }
                 else {
-                    child(path);
+                    child(path, arguments, i);
                 }
-            // }
+            }
         }
         else {
             // file doesn't exist or is not executable
-            printf("Error not a exec\n");
+            printf("File %s is not a file or directory.\n", cmd);
         }
     }
     return 0;
@@ -123,20 +196,20 @@ void parent() {
     wait(NULL);
 }
 
-void child(char* path) {
-    char *cmdArgs[2];
+void child(char* path, char* arguments, int size) {
+    char *cmdArgs[MAXBUF];
     cmdArgs[0] = path;
-    // int arg = 1;
-    // if (!strcmp(arguments, "")) {
-    //     char *space = strtok(arguments, " ");
-    //     //split the string by spaces and place them into the path or make an argument
-	//     while (space != NULL)
-	//     {
-    //         cmdArgs[arg] = arguments;
-    //         arg++;
-    //         space = strtok(NULL, " ");
-    //     }
-    // }
-    cmdArgs[1] = NULL;
+    int arg = 1;
+    printf("entered:%s\n", arguments);
+    char *space = strtok(arguments, "\0");
+    //split the string by spaces and place them into the path or make an argument
+	while (space != NULL)
+	{
+        cmdArgs[arg] = space;
+        arg++;
+        space = strtok(NULL, "\0");
+    }
+    cmdArgs[arg] = NULL;
+    //run execv
     execv(path, cmdArgs);
 }
