@@ -23,6 +23,7 @@ char history[HISTORY_LEN] = "";
 // TODO: Your function definitions (declarations in dsh.h)
 int dsh(char* cmd) {
     char path[MAXBUF] = "";
+    //create the history timeline
     strcat(history, cmd);
     strcat(history, "\n");
     strcpy(path, cmd);
@@ -89,11 +90,6 @@ int dsh(char* cmd) {
             //exit
             return -1;
         }
-        // if possible
-        // else if(chkBuiltin(path) == 5) {
-        //     //echo
-        //     return -1;
-        // }
         
         //if not a builtin
         else {
@@ -160,7 +156,7 @@ int dsh(char* cmd) {
                 }
                 if(!fileThere) {
                     // file doesn't exist or is not executable
-                    printf("File %s is not a file or directory.\n", cmd);
+                    printf("ERROR: %s not found!\n", path);
                 }
             }
         }
@@ -186,7 +182,7 @@ int dsh(char* cmd) {
         }
         else {
             // file doesn't exist or is not executable
-            printf("File %s is not a file or directory.\n", cmd);
+            printf("ERROR: %s not found!\n", path);
         }
     }
     return 0;
@@ -200,7 +196,6 @@ void child(char* path, char* arguments, int size) {
     char *cmdArgs[MAXBUF];
     cmdArgs[0] = path;
     int arg = 1;
-    printf("entered:%s\n", arguments);
     char *space = strtok(arguments, "\0");
     //split the string by spaces and place them into the path or make an argument
 	while (space != NULL)

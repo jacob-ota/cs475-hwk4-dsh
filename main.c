@@ -16,8 +16,12 @@
 int main(int argc, char **argv)
 {
 	char cmdline[MAXBUF]; // stores user input from commmand line
-
-	printf("MOTD: %s\n", getenv("HOME"));
+	
+	//get motd
+	char motd[MAXBUF];
+	strcpy(motd, getenv("PWD"));
+	strcat(motd, "/.dsh_motd");
+	printf("%s\n", motd);
 	bool dshOn = true;
 	int test;
 	while(dshOn) {
