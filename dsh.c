@@ -21,6 +21,14 @@
 char history[HISTORY_LEN] = "";
 
 // TODO: Your function definitions (declarations in dsh.h)
+/**
+ * The dsh function is the brain of the dsh shell and runs basically 
+ * all of its functions and controls all the if and else's that come with
+ * building a shell
+ * 
+ * @param cmd the command from the user to be evaluated by the dsh
+ * @return int -1 for exit or 0 for keep running
+ */
 int dsh(char* cmd) {
     char path[MAXBUF] = "";
     //create the history timeline
@@ -40,7 +48,7 @@ int dsh(char* cmd) {
         else {
             //creates the arguments
             strcat(arguments, space);
-            strcat(arguments, "\0");
+            strcat(arguments, " ");
         }   
         i++;
 	    space = strtok(NULL, " ");
@@ -49,10 +57,14 @@ int dsh(char* cmd) {
         //check if it is a builtin
         if(chkBuiltin(path) == 1) {
             //cd
+            char *blankSpace = "\0";
+            arguments[strlen(arguments) - 1] = *blankSpace;
             if(strlen(arguments) == 0) {
+                //change directory to home if nothing is input with cd
                 chdir(getenv("HOME"));
             }
             else {
+                //or get the current directory and concat the path onto the end of it
                 char pwd[MAXBUF];
                 char newPath[MAXBUF] = "";
                 if(getcwd(pwd, sizeof(pwd)) != NULL) {
@@ -62,18 +74,20 @@ int dsh(char* cmd) {
                     strcat(pwd, newPath);
                 }
                 if(chdir(pwd) != 0) {
-                    printf("No such directory: %s\n", arguments);
+                    //if nothing is there than error message
+                    printf("ERROR: No such directory: %s\n", arguments);
                 }
             }
         }
         else if(chkBuiltin(path) == 2) {
             //pwd
             char pwd[MAXBUF];
+            //print out the current directory or error if not
             if(getcwd(pwd, sizeof(pwd)) != NULL) {
                 printf("%s\n", pwd);
             }
             else {
-                printf("Current directory unable to be found!\n");
+                printf("ERROR: Current directory unable to be found!\n");
             }
         }
         else if(chkBuiltin(path) == 3) {
@@ -93,6 +107,7 @@ int dsh(char* cmd) {
         
         //if not a builtin
         else {
+            //concat the command onto the pwd and try running it
             char pwd[MAXBUF];
             getcwd(pwd, sizeof(pwd));
             strcat(pwd, cmd);
@@ -101,7 +116,7 @@ int dsh(char* cmd) {
                 //if an & is at the end then run the child without waiting
                 if(cmd[strlen(cmd) - 1] == '&') {
                     if(fork() == 0) {
-                        child(path, arguments, i);
+                        child(path, arguments);
                     }
                 }
                 //if it does not have a & then have the parent wait for the child
@@ -110,7 +125,7 @@ int dsh(char* cmd) {
                         parent();
                     }
                     else {
-                        child(path, arguments, i);
+                        child(path, arguments);
                     }
                 }
             }
@@ -134,7 +149,7 @@ int dsh(char* cmd) {
                         //if an & is at the end then run the child without waiting
                         if(cmd[strlen(cmd) - 1] == '&') {
                             if(fork() == 0) {
-                                child(newPath, arguments, i);
+                                child(newPath, arguments);
                             }
                         }
                         //if it does not have a & then have the parent wait for the child
@@ -143,7 +158,7 @@ int dsh(char* cmd) {
                                 parent();
                             }
                             else {
-                                child(newPath, arguments, i);
+                                child(newPath, arguments);
                             }
                         }
                         fileThere = true;
@@ -167,7 +182,7 @@ int dsh(char* cmd) {
             //if an & is at the end then run the child without waiting
             if(cmd[strlen(cmd) - 1] == '&') {
                 if(fork() == 0) {
-                    child(path, arguments, i);
+                    child(path, arguments);
                 }
             }
             //if it does not have a & then have the parent wait for the child
@@ -176,7 +191,7 @@ int dsh(char* cmd) {
                     parent();
                 }
                 else {
-                    child(path, arguments, i);
+                    child(path, arguments);
                 }
             }
         }
@@ -188,23 +203,32 @@ int dsh(char* cmd) {
     return 0;
 }
 
+/**
+ * The parent function is just meant to wait on the child
+ */
 void parent() {
     wait(NULL);
 }
 
-void child(char* path, char* arguments, int size) {
+/**
+ * The child function takes the path and its arguments and 
+ * runs the execv function to run the program that is needed to run
+ * 
+ * @param path the full path to a directory
+ * @param arguments the arguments associated with that call
+ */
+void child(char* path, char* arguments) {
     char *cmdArgs[MAXBUF];
+    char *blankSpace = "\0";
+    //create the arguments for the execv
     cmdArgs[0] = path;
-    int arg = 1;
-    char *space = strtok(arguments, "\0");
-    //split the string by spaces and place them into the path or make an argument
-	while (space != NULL)
-	{
-        cmdArgs[arg] = space;
-        arg++;
-        space = strtok(NULL, "\0");
+    int args = 1;
+    if(strlen(arguments) != 0) {
+        arguments[strlen(arguments) - 1] = *blankSpace;
+        cmdArgs[args] = arguments;
+        args++;
     }
-    cmdArgs[arg] = NULL;
+    cmdArgs[args] = NULL;
     //run execv
     execv(path, cmdArgs);
 }
